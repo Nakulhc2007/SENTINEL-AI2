@@ -40,6 +40,7 @@ def _normalize_record(raw: dict[str, Any], default_domain: str | None = None) ->
         'user': 'username', 'account': 'username', 'role': 'user_role', 'device_name': 'device',
         'process': 'process_category', 'tool': 'process_category', 'tool_category': 'process_category',
         'event': 'action', 'event_type': 'action', 'operation': 'action', 'target': 'resource',
+        'document_path': 'resource', 'file_path': 'resource',
         'permission': 'permission_level', 'data_volume': 'data_volume_mb', 'export_volume_mb': 'data_volume_mb',
         'maintenance_schedule_ref': 'maintenance_ref', 'change_reference': 'maintenance_ref',
         'eventid': 'event_id', 'user_name': 'username', 'sourceip': 'source_ip',
@@ -75,6 +76,9 @@ def _normalize_record(raw: dict[str, Any], default_domain: str | None = None) ->
         source['data_volume_mb'] = 0
     if not str(source.get('maintenance_ref') or '').strip():
         source['maintenance_ref'] = None
+    for key in ('document_hash_before', 'document_hash_after'):
+        if not str(source.get(key) or '').strip():
+            source[key] = None
     for key, fallback in (('source_ip', 'unknown'), ('device', 'unknown'), ('outcome', 'success'), ('process_category', 'administrative_tool'), ('permission_level', 'standard'), ('resource', 'unknown')):
         if not str(source.get(key) or '').strip():
             source[key] = fallback

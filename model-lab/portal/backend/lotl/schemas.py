@@ -20,6 +20,8 @@ class ActivityEvent(BaseModel):
     process_category: str = Field(default='administrative_tool', max_length=100)
     action: str = Field(min_length=1, max_length=160)
     resource: str = Field(default='unknown', max_length=240)
+    document_hash_before: str | None = Field(default=None, pattern='^[a-fA-F0-9]{64}$')
+    document_hash_after: str | None = Field(default=None, pattern='^[a-fA-F0-9]{64}$')
     permission_level: str = Field(default='standard', max_length=80)
     data_volume_mb: float = Field(default=0, ge=0, le=10_000_000)
     maintenance_ref: str | None = Field(default=None, max_length=120)

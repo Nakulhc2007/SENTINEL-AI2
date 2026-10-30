@@ -31,6 +31,8 @@ The main `Deepfake-Tracker/index.html` dashboard adds the LotL monitor, user bas
 
 The monitor accepts CSV activity fields such as timestamp, username, role, IP, device, process category, action, resource, permission level, data volume, session, and change reference. It ignores unrelated fields. Use only synthetic or explicitly authorized logs; do not upload passwords, tokens, or secrets. Four built-in scenarios demonstrate normal work, night activity, gradual deviation, and approved maintenance. A response approval records a safe simulation only; it never changes an account or system. Risk values are explainable demo heuristics, not validated probabilities.
 
+For suspicious LotL incidents, the Verification Agent lists document paths found in the activity records. CSV imports may use `document_path` or `file_path` for the resource and may include `document_hash_before` and `document_hash_after` (64-character SHA-256 hex values) to compare content. Without a document path, the affected document is reported as unknown; without both hashes, integrity is reported as not checked. The agent does not read or alter files, and path identification is only as reliable as the submitted logs.
+
 In a first terminal, create the backend environment once, install its existing dependencies, and start the API:
 
 ```powershell

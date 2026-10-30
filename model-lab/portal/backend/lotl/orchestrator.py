@@ -91,7 +91,7 @@ def run_workflow(scenario_id: str, name: str, events: list[dict[str, Any]], doma
         responses = response_agent(assessments, risks, fresh_events)
         for item, investigation, risk, response in zip(results, investigations, risks, responses):
             item['investigation'], item['risk_assessment'], item['response'] = investigation, risk, response
-            item['verification'] = verification_agent({'decision': 'pending' if response['status'] == 'pending_human_approval' else 'monitor', 'decided_at': None if response['status'] == 'pending_human_approval' else datetime.now(timezone.utc).isoformat(timespec='seconds')})
+            item['verification'] = verification_agent({'decision': 'pending' if response['status'] == 'pending_human_approval' else 'monitor', 'decided_at': None if response['status'] == 'pending_human_approval' else datetime.now(timezone.utc).isoformat(timespec='seconds'), 'suspicious': item['detection']['detection']['suspicious']}, [item['detection']['event']])
         suspicious = [item['detection']['detection']['suspicious'] for item in results]
 
     grouped: dict[str, list[int]] = {}
@@ -104,6 +104,10 @@ def run_workflow(scenario_id: str, name: str, events: list[dict[str, Any]], doma
         selected = results[best]
         incident_id = new_id('LOT')
         related_events = [results[index]['detection']['event'] for index in indexes]
+        verification = verification_agent(
+            {'decision': 'pending', 'decided_at': None, 'suspicious': True},
+            related_events,
+        )
         status = 'Awaiting human approval'
         summary = {
             'incident_id': incident_id, 'run_id': run_id, 'scenario_id': scenario_id, 'name': name,
@@ -112,7 +116,7 @@ def run_workflow(scenario_id: str, name: str, events: list[dict[str, Any]], doma
             'detection': [results[index]['detection']['detection'] for index in indexes],
             'baseline': selected['detection']['baseline'], 'investigation': selected['investigation'],
             'risk_assessment': selected['risk_assessment'], 'response': selected['response'],
-            'verification': selected['verification'], 'business_impact': selected['response'],
+            'verification': verification, 'business_impact': selected['response'],
             'status': status,
         }
         incidents.append(summary)
@@ -159,11 +163,11 @@ def decide(incident_id: str, decision: str, approver: str, note: str) -> dict[st
         record = {'decision': decision, 'approver': approver, 'note': note, 'decided_at': now, 'simulated': True}
         incident['human_approval'] = record
         if decision == 'approve':
-            verification = verification_agent(record)
+            verification = verification_agent(record | {'suspicious': True}, incident.get('events', []))
             incident['verification'] = verification
             incident['status'] = 'Approved · simulation verified'
         elif decision == 'reject':
-            incident['verification'] = {'status': 'not_executed', 'result': 'Human reviewer rejected the recommendation; no change was made.', 'verified_at': now, 'simulated': True}
+            incident['verification'] = verification_agent(record | {'suspicious': True}, incident.get('events', []))
             incident['status'] = 'Rejected · no action taken'
         else:
             incident['status'] = 'Needs further review'

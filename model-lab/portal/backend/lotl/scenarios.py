@@ -37,8 +37,8 @@ def scenario_bundle(scenario_id: str, now: datetime | None = None, organization_
     if scenario_id == 'suspicious-night-activity':
         night = today.replace(hour=2, minute=10)
         rows = [
-            base | {'timestamp': _at(night, 2, 10), 'source_ip': '203.0.113.77', 'device': 'UNKNOWN-LINUX-8', 'action': 'grant_admin', 'resource': '/production/payroll', 'permission_level': 'global_admin', 'data_volume_mb': 780, 'outcome': 'success', 'session_id': 'night-session-1'},
-            base | {'timestamp': _at(night, 2, 16), 'source_ip': '203.0.113.77', 'device': 'UNKNOWN-LINUX-8', 'action': 'data_export', 'resource': '/production/customer-backup', 'permission_level': 'global_admin', 'data_volume_mb': 640, 'outcome': 'success', 'session_id': 'night-session-1'},
+            base | {'timestamp': _at(night, 2, 10), 'source_ip': '203.0.113.77', 'device': 'UNKNOWN-LINUX-8', 'action': 'grant_admin', 'process_category': 'document_management', 'resource': '/production/payroll.xlsx', 'permission_level': 'global_admin', 'data_volume_mb': 780, 'outcome': 'success', 'session_id': 'night-session-1'},
+            base | {'timestamp': _at(night, 2, 16), 'source_ip': '203.0.113.77', 'device': 'UNKNOWN-LINUX-8', 'action': 'data_export', 'process_category': 'document_management', 'resource': '/production/customer-backup.csv', 'permission_level': 'global_admin', 'data_volume_mb': 640, 'outcome': 'success', 'session_id': 'night-session-1'},
         ]
         return {'id': scenario_id, 'name': 'Suspicious night activity', 'description': 'Sensitive production exports and a permission change at 02:10 from a new device, outside an approved maintenance window.', 'events': _event_models(scenario_id, organization_domain, rows), 'maintenance': []}
     if scenario_id == 'gradual-credential-misuse':

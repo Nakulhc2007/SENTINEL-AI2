@@ -6,6 +6,11 @@ from typing import Any
 
 from .engine import build_baseline, evaluate_event
 
+DOCUMENT_EXTENSIONS = {
+    '.csv', '.doc', '.docx', '.odt', '.pdf', '.rtf', '.txt',
+    '.xls', '.xlsx', '.ods', '.ppt', '.pptx',
+}
+
 
 def detection_agent(events: list[dict[str, Any]], baselines: dict[str, dict[str, Any]], maintenance: list[dict[str, Any]], history: list[dict[str, Any]]) -> list[dict[str, Any]]:
     findings = []
@@ -57,13 +62,79 @@ def response_agent(detection: list[dict[str, Any]], risk: list[dict[str, Any]], 
     return recommendations
 
 
-def verification_agent(decision: dict[str, Any]) -> dict[str, Any]:
-    approved = decision['decision'] == 'approve'
-    if decision['decision'] == 'monitor':
-        return {'status': 'verified', 'result': 'No action was required; the expected demo outcome is continued monitoring.', 'verified_at': decision['decided_at'], 'simulated': True}
-    if decision['decision'] == 'pending':
-        return {'status': 'awaiting_human_decision', 'result': 'Response remains pending human approval; no change was made.', 'verified_at': None, 'simulated': True}
-    return {'status': 'verified' if approved else 'not_executed', 'result': 'The requested demo response was recorded as simulated; no external account or system was changed.' if approved else 'No response was executed. The decision and reason were recorded for review.', 'verified_at': decision['decided_at'], 'simulated': True}
+def verification_agent(decision: dict[str, Any], events: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    choice = decision['decision']
+    suspicious = decision.get('suspicious', False)
+    if choice == 'monitor':
+        result = 'No action was required; the expected demo outcome is continued monitoring.'
+        status, verified_at = 'verified', decision['decided_at']
+    elif choice == 'pending':
+        result = 'Response remains pending human approval; no change was made.'
+        status, verified_at = 'awaiting_human_decision', None
+    elif choice == 'approve':
+        result = 'The requested demo response was recorded as simulated; no external account or system was changed.'
+        status, verified_at = 'verified', decision['decided_at']
+    else:
+        result = 'No response was executed. The decision and reason were recorded for review.'
+        status, verified_at = 'not_executed', decision['decided_at']
+
+    documents: dict[str, dict[str, Any]] = {}
+    for event in events or []:
+        resource = str(event.get('resource') or '').strip()
+        if not resource or resource.casefold() == 'unknown':
+            continue
+        lowered = resource.casefold()
+        suffix = lowered.rsplit('/', 1)[-1].rsplit('\\', 1)[-1]
+        is_document = (
+            any(suffix.endswith(extension) for extension in DOCUMENT_EXTENSIONS)
+            or any(term in str(event.get('process_category', '')).casefold() for term in ('document', 'file'))
+            or any(term in str(event.get('action', '')).casefold() for term in ('document', 'file'))
+        )
+        if not is_document:
+            continue
+        record = documents.setdefault(resource, {
+            'resource': resource,
+            'integrity_status': 'not_checked',
+            'evidence_event_ids': [],
+            'hash_pairs': [],
+        })
+        if event.get('event_id') and event['event_id'] not in record['evidence_event_ids']:
+            record['evidence_event_ids'].append(event['event_id'])
+        before, after = event.get('document_hash_before'), event.get('document_hash_after')
+        if before and after:
+            record['hash_pairs'].append((before.casefold(), after.casefold()))
+
+    affected_documents = []
+    for record in documents.values():
+        hash_pairs = record.pop('hash_pairs')
+        if hash_pairs:
+            record['integrity_status'] = 'changed' if any(before != after for before, after in hash_pairs) else 'unchanged'
+        affected_documents.append(record)
+
+    if suspicious:
+        if affected_documents:
+            details = ', '.join(
+                f"{item['resource']} (integrity {item['integrity_status']})"
+                for item in affected_documents
+            )
+            result += f' Document path(s) identified from suspicious activity logs: {details}.'
+        else:
+            result += ' No document path was present in the suspicious activity logs, so the affected document cannot be identified from these records.'
+
+    integrity_checked = any(item['integrity_status'] != 'not_checked' for item in affected_documents)
+    return {
+        'status': status,
+        'result': result,
+        'verified_at': verified_at,
+        'simulated': True,
+        'affected_documents': affected_documents if suspicious else [],
+        'integrity_checked': integrity_checked if suspicious else False,
+        'integrity_note': (
+            'Integrity status is based on before/after SHA-256 values supplied in the activity logs; the file itself was not read.'
+            if integrity_checked else
+            'Document paths are identified from activity logs only. File integrity was not checked; include before/after SHA-256 values to verify content changes.'
+        ) if suspicious and affected_documents else None,
+    }
 
 
 def run_five_agents(events: list[dict[str, Any]], baselines: dict[str, dict[str, Any]], maintenance: list[dict[str, Any]], history: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -72,5 +143,5 @@ def run_five_agents(events: list[dict[str, Any]], baselines: dict[str, dict[str,
     assessments = [row['detection'] for row in detection]
     risks = risk_assessment_agent(assessments)
     responses = response_agent(assessments, risks, events)
-    return [{'detection': detected, 'investigation': investigation, 'risk_assessment': risk, 'response': response, 'verification': verification_agent({'decision': 'pending' if response['status'] == 'pending_human_approval' else 'monitor', 'decided_at': None if response['status'] == 'pending_human_approval' else datetime.now(timezone.utc).isoformat(timespec='seconds')})}
+    return [{'detection': detected, 'investigation': investigation, 'risk_assessment': risk, 'response': response, 'verification': verification_agent({'decision': 'pending' if response['status'] == 'pending_human_approval' else 'monitor', 'decided_at': None if response['status'] == 'pending_human_approval' else datetime.now(timezone.utc).isoformat(timespec='seconds'), 'suspicious': detected['detection']['suspicious']}, [detected['event']])}
             for detected, investigation, risk, response in zip(detection, investigations, risks, responses)]

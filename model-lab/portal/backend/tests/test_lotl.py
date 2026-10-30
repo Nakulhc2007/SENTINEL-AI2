@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from lotl import storage
+from lotl.agents import verification_agent
 from lotl.engine import build_baseline, evaluate_event
 from lotl.orchestrator import get_events
 from lotl.orchestrator import decide, run_workflow
@@ -53,6 +54,10 @@ class LivingOffTheLandTests(unittest.TestCase):
         self.assertGreaterEqual(incident['risk_assessment']['score'], 65)
         self.assertTrue(incident['risk_assessment']['factors'])
         self.assertEqual(incident['response']['status'], 'pending_human_approval')
+        self.assertEqual(
+            {item['resource'] for item in incident['verification']['affected_documents']},
+            {'/production/payroll.xlsx', '/production/customer-backup.csv'},
+        )
         self.assertEqual(len(result['workflow']), 2)
 
     def test_gradual_misuse_is_correlated_across_sessions(self):
@@ -70,6 +75,33 @@ class LivingOffTheLandTests(unittest.TestCase):
         self.assertEqual(approved['verification']['status'], 'verified')
         self.assertTrue(approved['verification']['simulated'])
         self.assertIn('no external account', approved['verification']['result'])
+        self.assertTrue(approved['verification']['affected_documents'])
+
+    def test_verification_identifies_document_and_checks_supplied_hashes(self):
+        event = {
+            'event_id': 'EVT-DOC-1',
+            'resource': r'\production\payroll.xlsx',
+            'action': 'document_export',
+            'process_category': 'document_management',
+            'document_hash_before': 'a' * 64,
+            'document_hash_after': 'b' * 64,
+        }
+        result = verification_agent(
+            {'decision': 'pending', 'decided_at': None, 'suspicious': True},
+            [event],
+        )
+        self.assertEqual(result['affected_documents'][0]['resource'], event['resource'])
+        self.assertEqual(result['affected_documents'][0]['integrity_status'], 'changed')
+        self.assertTrue(result['integrity_checked'])
+        self.assertIn(event['resource'], result['result'])
+
+    def test_verification_reports_unknown_document_when_resource_is_not_a_file(self):
+        result = verification_agent(
+            {'decision': 'pending', 'decided_at': None, 'suspicious': True},
+            [{'event_id': 'EVT-1', 'resource': '/production/payroll', 'action': 'grant_admin'}],
+        )
+        self.assertEqual(result['affected_documents'], [])
+        self.assertIn('cannot be identified', result['result'])
 
     def test_duplicate_event_ids_do_not_create_duplicate_incidents(self):
         scenario, first = self.run_named('suspicious-night-activity')
