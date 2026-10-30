@@ -1,0 +1,11 @@
+.tools/
+portal/backend/.venv/
+portal/backend/__pycache__/
+portal/backend/*.sqlite3
+portal/backend/*.sqlite3-shm
+portal/backend/*.sqlite3-wal
+portal/backend/private_files/
+portal/client/node_modules/
+portal/client/dist/
+portal/client/*.tsbuildinfo
+portal/**/*.log

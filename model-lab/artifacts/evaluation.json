@@ -1,0 +1,160 @@
+{
+  "title": "SENTINEL-AI synthetic dataset evaluation",
+  "evaluation_note": "These metrics measure a deterministic synthetic holdout only. They are not estimates of real-world detection accuracy.",
+  "dataset": {
+    "total_rows": 6400,
+    "rows_per_domain": 800,
+    "domains": [
+      "banking",
+      "healthcare",
+      "education",
+      "government",
+      "corporate",
+      "manufacturing",
+      "retail",
+      "public_services"
+    ],
+    "suspicious_rate": 0.34,
+    "split": {
+      "training_rows": 5112,
+      "test_rows": 1288,
+      "method": "80/20 stratified by domain and label"
+    },
+    "seed": 20261030
+  },
+  "model": {
+    "algorithm": "Random Forest (CART decision trees, Gini impurity)",
+    "tree_count": 25,
+    "max_depth": 8,
+    "minimum_leaf_size": 12,
+    "threshold": 0.5
+  },
+  "overall": {
+    "samples": 1288,
+    "confusion_matrix": {
+      "true_positive": 425,
+      "false_positive": 0,
+      "true_negative": 848,
+      "false_negative": 15
+    },
+    "accuracy": 0.9884,
+    "precision": 1,
+    "recall": 0.9659,
+    "f1": 0.9827,
+    "roc_auc": 0.9997
+  },
+  "by_domain": {
+    "banking": {
+      "samples": 161,
+      "confusion_matrix": {
+        "true_positive": 53,
+        "false_positive": 0,
+        "true_negative": 106,
+        "false_negative": 2
+      },
+      "accuracy": 0.9876,
+      "precision": 1,
+      "recall": 0.9636,
+      "f1": 0.9815,
+      "roc_auc": 0.9995
+    },
+    "healthcare": {
+      "samples": 161,
+      "confusion_matrix": {
+        "true_positive": 52,
+        "false_positive": 0,
+        "true_negative": 106,
+        "false_negative": 3
+      },
+      "accuracy": 0.9814,
+      "precision": 1,
+      "recall": 0.9455,
+      "f1": 0.972,
+      "roc_auc": 0.9988
+    },
+    "education": {
+      "samples": 161,
+      "confusion_matrix": {
+        "true_positive": 52,
+        "false_positive": 0,
+        "true_negative": 106,
+        "false_negative": 3
+      },
+      "accuracy": 0.9814,
+      "precision": 1,
+      "recall": 0.9455,
+      "f1": 0.972,
+      "roc_auc": 0.9993
+    },
+    "government": {
+      "samples": 161,
+      "confusion_matrix": {
+        "true_positive": 54,
+        "false_positive": 0,
+        "true_negative": 106,
+        "false_negative": 1
+      },
+      "accuracy": 0.9938,
+      "precision": 1,
+      "recall": 0.9818,
+      "f1": 0.9908,
+      "roc_auc": 1
+    },
+    "corporate": {
+      "samples": 161,
+      "confusion_matrix": {
+        "true_positive": 53,
+        "false_positive": 0,
+        "true_negative": 106,
+        "false_negative": 2
+      },
+      "accuracy": 0.9876,
+      "precision": 1,
+      "recall": 0.9636,
+      "f1": 0.9815,
+      "roc_auc": 1
+    },
+    "manufacturing": {
+      "samples": 161,
+      "confusion_matrix": {
+        "true_positive": 53,
+        "false_positive": 0,
+        "true_negative": 106,
+        "false_negative": 2
+      },
+      "accuracy": 0.9876,
+      "precision": 1,
+      "recall": 0.9636,
+      "f1": 0.9815,
+      "roc_auc": 1
+    },
+    "retail": {
+      "samples": 161,
+      "confusion_matrix": {
+        "true_positive": 54,
+        "false_positive": 0,
+        "true_negative": 106,
+        "false_negative": 1
+      },
+      "accuracy": 0.9938,
+      "precision": 1,
+      "recall": 0.9818,
+      "f1": 0.9908,
+      "roc_auc": 1
+    },
+    "public_services": {
+      "samples": 161,
+      "confusion_matrix": {
+        "true_positive": 54,
+        "false_positive": 0,
+        "true_negative": 106,
+        "false_negative": 1
+      },
+      "accuracy": 0.9938,
+      "precision": 1,
+      "recall": 0.9818,
+      "f1": 0.9908,
+      "roc_auc": 0.9997
+    }
+  }
+}
